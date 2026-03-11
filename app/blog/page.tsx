@@ -61,9 +61,7 @@ export default function BlogPage() {
           <h1 className="mt-5 max-w-4xl text-4xl font-semibold leading-tight sm:text-5xl">
             Health insights, care guidance, and practical updates from our team.
           </h1>
-          <p className="mt-5 max-w-2xl text-base leading-7 text-blue-50">
-            Browse the latest published healthcare articles directly from our backend-powered blog.
-          </p>
+          
         </div>
       </section>
 

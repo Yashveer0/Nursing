@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -9,7 +9,6 @@ import {
   ChevronDown,
   Menu,
   X,
-  Phone,
   Globe,
   MapPin,
   Users,
@@ -33,7 +32,6 @@ import {
 } from 'lucide-react';
 
 import { Button } from './ui/button';
-import { CallbackForm } from './callback-form';
 import { useAuth } from '@/components/auth/auth-provider';
 
 /* ================= NAV ITEMS ================= */
@@ -121,139 +119,218 @@ export default function Header() {
 
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState<string | null>(null);
-  const [showInquiry, setShowInquiry] = useState(false);
 
   const { isAuthenticated, isReady, logout } = useAuth();
 
   const toggle = (key: string) =>
     setActive(active === key ? null : key);
 
+  useEffect(() => {
+    const originalOverflow = document.body.style.overflow;
+
+    if (open) {
+      document.body.style.overflow = 'hidden';
+    }
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, [open]);
+
   return (
+    <>
+      <header className="fixed top-0 left-0 right-0 z-50 border-b border-blue-100 bg-blue-100/70 shadow-sm backdrop-blur-md">
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex h-20 items-center justify-between gap-4 xl:h-24">
+            <Link href="/" className="flex items-center shrink-0">
+              <Image
+                src="/logo_nursing.png"
+                alt="Nursing Sarathi"
+                width={180}
+                height={46}
+                className="w-28 sm:w-32 xl:w-[130px] object-contain"
+                priority
+              />
+            </Link>
 
-<header className="fixed top-0 left-0 right-0 z-50 border-b border-blue-100 bg-blue-100/70 shadow-sm backdrop-blur-md">
+            <nav className="hidden xl:flex flex-1 items-center justify-center gap-1 text-[14px] font-medium flex-wrap">
+              {navItems.map((item, index) => {
+                if (item.type === 'link') return <NavLink key={index} {...item} />;
+                if (item.type === 'dropdown') return <NavDropdown key={index} {...item} />;
+                return null;
+              })}
+            </nav>
 
-<div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="hidden xl:flex shrink-0 items-center gap-2">
+              {isReady && !isAuthenticated && (
+                <Link href="/login">
+                  <Button variant="outline" className="h-10 rounded-full px-4 text-sm">
+                    <User className="h-4 w-4 mr-2" />
+                    Login
+                  </Button>
+                </Link>
+              )}
 
-<div className="flex h-20 items-center justify-between gap-4 xl:h-24">
+              {isReady && isAuthenticated && (
+                <>
+                  <Link href="/profile">
+                    <Button variant="outline" className="h-10 rounded-full px-4 text-sm">
+                      <User className="h-4 w-4 mr-2" />
+                      Profile
+                    </Button>
+                  </Link>
 
-{/* LOGO */}
+                  <Button
+                    variant="ghost"
+                    onClick={logout}
+                    className="h-10 rounded-full px-3 text-sm text-gray-700 hover:text-red-600 hover:bg-red-50"
+                  >
+                    <LogOut className="h-4 w-4 mr-1.5" />
+                    Logout
+                  </Button>
+                </>
+              )}
+            </div>
 
-<Link href="/" className="flex items-center shrink-0">
+            <div className="flex xl:hidden items-center gap-2">
+              <button
+                type="button"
+                aria-label={open ? 'Close menu' : 'Open menu'}
+                aria-expanded={open}
+                onClick={() => setOpen((current) => !current)}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full border bg-white shadow-sm"
+              >
+                {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
 
-<Image
-src="/logo_nursing.png"
-alt="Nursing Sarathi"
-width={180}
-height={46}
-className="w-28 sm:w-32 xl:w-[130px] object-contain"
-priority
-/>
+      <AnimatePresence>
+        {open && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-40 bg-slate-950/45 xl:hidden"
+              onClick={() => setOpen(false)}
+            />
 
-</Link>
+            <motion.div
+              initial={{ opacity: 0, y: -16 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -16 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-x-4 top-24 z-50 max-h-[calc(100vh-7rem)] overflow-y-auto rounded-[28px] border border-slate-200 bg-white p-4 shadow-[0_24px_80px_rgba(15,23,42,0.22)] xl:hidden"
+            >
+              <div className="space-y-2">
+                {navItems.map((item, index) => {
+                  if (item.type === 'link') {
+                    const Icon = item.icon;
 
-{/* DESKTOP NAV */}
+                    return (
+                      <Link
+                        key={index}
+                        href={item.href}
+                        onClick={() => setOpen(false)}
+                        className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50 hover:text-primary"
+                      >
+                        <Icon className="h-4 w-4" />
+                        <span>{item.label}</span>
+                      </Link>
+                    );
+                  }
 
-<nav className="hidden xl:flex flex-1 items-center justify-center gap-1 text-[14px] font-medium flex-wrap">
+                  const isExpanded = active === item.label;
 
-{navItems.map((item, index) => {
+                  return (
+                    <div key={index} className="rounded-2xl border border-slate-200">
+                      <button
+                        type="button"
+                        onClick={() => toggle(item.label)}
+                        className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left text-sm font-medium text-slate-700"
+                      >
+                        <span className="flex items-center gap-3">
+                          <item.icon className="h-4 w-4" />
+                          <span>{item.label}</span>
+                        </span>
+                        <ChevronDown
+                          className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                        />
+                      </button>
 
-if (item.type === 'link') return <NavLink key={index} {...item} />;
+                      <AnimatePresence initial={false}>
+                        {isExpanded && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            className="overflow-hidden border-t border-slate-200"
+                          >
+                            <div className="space-y-1 px-3 py-3">
+                              {item.items.map((subItem: any, subIndex: number) => (
+                                <Link
+                                  key={subIndex}
+                                  href={subItem.href}
+                                  onClick={() => {
+                                    setOpen(false);
+                                    setActive(null);
+                                  }}
+                                  className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-slate-600 transition hover:bg-slate-50 hover:text-primary"
+                                >
+                                  <subItem.icon className="h-4 w-4" />
+                                  <span>{subItem.label}</span>
+                                </Link>
+                              ))}
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  );
+                })}
+              </div>
 
-if (item.type === 'dropdown') return <NavDropdown key={index} {...item} />;
+              <div className="mt-4 border-t border-slate-200 pt-4">
+                {isReady && !isAuthenticated && (
+                  <Link href="/login" onClick={() => setOpen(false)} className="block">
+                    <Button variant="outline" className="w-full rounded-full">
+                      <User className="h-4 w-4 mr-2" />
+                      Login
+                    </Button>
+                  </Link>
+                )}
 
-return null;
-
-})}
-
-</nav>
-
-{/* CTA */}
-
-<div className="hidden xl:flex shrink-0 items-center gap-2">
-
-{isReady && !isAuthenticated && (
-
-<Link href="/login">
-
-<Button variant="outline" className="h-10 rounded-full px-4 text-sm">
-
-<User className="h-4 w-4 mr-2" />
-
-Login
-
-</Button>
-
-</Link>
-
-)}
-
-{isReady && isAuthenticated && (
-
-<>
-
-<Link href="/profile">
-
-<Button variant="outline" className="h-10 rounded-full px-4 text-sm">
-
-<User className="h-4 w-4 mr-2" />
-
-Profile
-
-</Button>
-
-</Link>
-
-<Button
-variant="ghost"
-onClick={logout}
-className="h-10 rounded-full px-3 text-sm text-gray-700 hover:text-red-600 hover:bg-red-50"
->
-
-<LogOut className="h-4 w-4 mr-1.5" />
-
-Logout
-
-</Button>
-
-</>
-
-)}
-
-{/* <Button
-onClick={() => setShowInquiry(true)}
-className="h-10 rounded-full px-4 text-sm bg-primary text-white hover:bg-red-500"
->
-
-<Phone className="h-4 w-4 mr-2" />
-
-Call Back
-
-</Button> */}
-
-</div>
-
-{/* MOBILE BUTTON */}
-
-<div className="flex xl:hidden items-center gap-2">
-
-<button
-onClick={() => setOpen(true)}
-className="inline-flex h-10 w-10 items-center justify-center rounded-full border bg-white shadow-sm"
->
-
-<Menu className="h-5 w-5" />
-
-</button>
-
-</div>
-
-</div>
-
-</div>
-
-</header>
-
-);
+                {isReady && isAuthenticated && (
+                  <div className="space-y-3">
+                    <Link href="/profile" onClick={() => setOpen(false)} className="block">
+                      <Button variant="outline" className="w-full rounded-full">
+                        <User className="h-4 w-4 mr-2" />
+                        Profile
+                      </Button>
+                    </Link>
+                    <Button
+                      variant="ghost"
+                      onClick={() => {
+                        setOpen(false);
+                        logout();
+                      }}
+                      className="w-full rounded-full"
+                    >
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Logout
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    </>
+  );
 
 }
 

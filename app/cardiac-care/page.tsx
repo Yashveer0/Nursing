@@ -8,7 +8,7 @@ import { CheckCircle, Phone, ChevronDown } from "lucide-react";
 
 export default function CardiacCarePage() {
   return (
-    <div className="relative overflow-hidden bg-linear-to-br from-muted/30 via-white to-white">
+    <div className="relative overflow-hidden mt-18 bg-linear-to-br from-muted/30 via-white to-white">
 
       {/* GRID BACKGROUND */}
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#0b28630f_1px,transparent_1px),linear-gradient(to_bottom,#0b28630f_1px,transparent_1px)] bg-[size:26px_26px]" />

@@ -14,7 +14,7 @@ export default function InternationalPatientsPage() {
     <div className="bg-[#f4f6f8]">
       {/* ================= HERO SECTION ================= */}
       <Header />
-      <section className="relative bg-white overflow-hidden">
+      <section className="relative mt-18 bg-white overflow-hidden">
         <div className="mx-auto max-w-7xl px-6 py-24 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
           
           {/* Left Content */}

@@ -65,15 +65,7 @@ export function CareProgramsSection() {
                   {programs[0].description}
                 </p>
 
-                <Link
-                  href="/programs"
-                  className="mt-auto inline-flex items-center gap-3 text-sm font-semibold"
-                >
-                  Know more
-                  <span className="h-8 w-8 rounded-full bg-red-500 text-white flex items-center justify-center">
-                    →
-                  </span>
-                </Link>
+               
               </div>
             </div>
           </Card>
@@ -101,15 +93,7 @@ export function CareProgramsSection() {
               {programs[1].description}
             </p>
 
-            <Link
-              href="/programs"
-              className="inline-flex items-center gap-3 text-sm font-semibold w-fit"
-            >
-              Know more
-              <span className="h-8 w-8 rounded-full bg-red-500 text-white flex items-center justify-center">
-                →
-              </span>
-            </Link>
+            
           </Card>
           </ScrollReveal>
 

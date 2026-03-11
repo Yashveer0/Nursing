@@ -41,12 +41,6 @@ type BlogsResponseData = {
   };
 };
 
-function getApiBaseUrl() {
-  return (
-    process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/+$/, '') ?? 'http://localhost:5000/api'
-  );
-}
-
 function normalizeErrorMessage(message: string, errors?: ApiErrorDetail[]) {
   if (!errors || errors.length === 0) {
     return message;
@@ -56,8 +50,9 @@ function normalizeErrorMessage(message: string, errors?: ApiErrorDetail[]) {
 }
 
 async function request<T>(path: string, init: RequestInit = {}) {
-  const response = await fetch(`${getApiBaseUrl()}${path}`, {
+  const response = await fetch(path, {
     ...init,
+    cache: 'no-store',
     headers: {
       'Content-Type': 'application/json',
       ...(init.headers ?? {}),
@@ -76,6 +71,11 @@ async function request<T>(path: string, init: RequestInit = {}) {
 }
 
 export async function getPublishedBlogs(limit = 50) {
-  const response = await request<BlogsResponseData>(`/blogs?status=PUBLISHED&limit=${limit}`);
+  const response = await request<BlogsResponseData>(`/api/blogs?limit=${limit}`);
+  return response.data?.blogs ?? [];
+}
+
+export async function getTrendingBlogs(limit = 8) {
+  const response = await request<BlogsResponseData>(`/api/blogs?limit=${limit}`);
   return response.data?.blogs ?? [];
 }

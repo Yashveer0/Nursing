@@ -56,7 +56,7 @@ export default function ContactPage() {
     <main className="bg-white">
       <Header />
 
-      <section className="relative mt-25 h-[240px] sm:h-[300px] md:h-[320px] w-full">
+      <section className="relative mt-24 h-[240px] sm:h-[300px] md:h-[320px] w-full">
         <Image src="/injection_img.png" alt="Contact Us" fill className="object-cover" />
         <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
           <h1 className="text-white text-3xl sm:text-4xl md:text-5xl font-bold">Contact Us</h1>

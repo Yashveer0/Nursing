@@ -8,7 +8,7 @@ import { CheckCircle, Phone, ChevronDown } from "lucide-react";
 
 export default function OrthopaedicsPage() {
   return (
-    <div className="relative overflow-hidden bg-linear-to-br from-muted/30 via-white to-white">
+    <div className="relative  overflow-hidden bg-linear-to-br from-muted/30 via-white to-white">
 
       {/* GRID BACKGROUND */}
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#0b28630f_1px,transparent_1px),linear-gradient(to_bottom,#0b28630f_1px,transparent_1px)] bg-[size:26px_26px]" />
@@ -17,7 +17,7 @@ export default function OrthopaedicsPage() {
       <div className="relative z-10 min-h-screen">
         <Header />
 
-        <div className="max-w-6xl mx-auto px-4 py-10">
+        <div className="max-w-6xl mt-15 mx-auto px-4 py-10">
           {/* BREADCRUMB */}
           <p className="text-sm text-gray-500 mb-4">
             Speciality / <span className="text-gray-700">Orthopaedics</span>

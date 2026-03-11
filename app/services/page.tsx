@@ -32,7 +32,7 @@ export default function ServicesPage() {
       <Header />
 
       {/* PAGE HEADER */}
-      <section className="py-16 text-center">
+      <section className="py-16 mt-18 text-center">
         <h1 className="text-4xl font-bold">Our Services</h1>
       </section>
 

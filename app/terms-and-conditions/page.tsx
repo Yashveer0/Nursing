@@ -15,7 +15,7 @@ export default function TermsPage() {
       <Header />
 
       {/* HERO */}
-      <section className="bg-gradient-to-r from-primary/10 to-accent/10 py-20">
+      <section className="bg-gradient-to-r mt-18 from-primary/10 to-accent/10 py-20">
         <div className="max-w-5xl mx-auto px-6 text-center">
           <motion.h1
             initial={{ opacity: 0, y: 30 }}

@@ -36,7 +36,7 @@ export default function NoidaLocationPage() {
       <div className="relative z-10 min-h-screen">
         <Header />
 
-        <div className="max-w-7xl mx-auto px-4 py-10">
+        <div className="max-w-7xl mx-auto px-4 mt-18 py-10">
           {/* ================= CITY TABS ================= */}
           <div className="flex flex-wrap gap-2 mb-6">
             {cities.map((city) => {

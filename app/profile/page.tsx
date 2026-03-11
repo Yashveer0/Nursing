@@ -34,7 +34,7 @@ export default function ProfilePage() {
   return (
     <main className="min-h-screen bg-[#f8fbff]">
       <Header />
-      <section className="relative overflow-hidden pt-28">
+      <section className="relative mt-18 overflow-hidden pt-28">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(37,99,235,0.12),transparent_34%),radial-gradient(circle_at_top_right,rgba(14,165,233,0.16),transparent_28%)]" />
         <div className="relative mx-auto max-w-6xl px-4 pb-20 sm:px-6 lg:px-8">
           <div className="overflow-hidden rounded-[36px] border border-sky-100 bg-white shadow-[0_24px_90px_rgba(15,23,42,0.08)]">

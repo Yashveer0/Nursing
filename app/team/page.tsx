@@ -41,7 +41,7 @@ export default function TeamPage() {
         <Header />
 
         {/* ================= HERO ================= */}
-        <section className="max-w-7xl mx-auto px-4 py-20">
+        <section className="max-w-7xl mt-18 mx-auto px-4 py-20">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
 
             {/* LEFT */}

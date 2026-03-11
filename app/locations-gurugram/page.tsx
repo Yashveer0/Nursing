@@ -24,7 +24,7 @@ export default function GurugramLocationPage() {
         <Header />
        
 
-        <div className="max-w-7xl mx-auto px-4 py-10">
+        <div className="max-w-7xl  mx-auto px-4 mt-18 py-10">
           {/* BREADCRUMB */}
            <div className="flex flex-wrap gap-2 mb-6">
   {[

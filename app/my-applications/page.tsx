@@ -76,7 +76,7 @@ export default function MyApplicationsPage() {
     <main className="min-h-screen bg-[#f8fbff]">
       <Header />
 
-      <section className="relative overflow-hidden bg-[linear-gradient(135deg,#102c57_0%,#1d4ed8_52%,#38bdf8_100%)] pt-28 text-white">
+      <section className="relative mt-18 overflow-hidden bg-[linear-gradient(135deg,#102c57_0%,#1d4ed8_52%,#38bdf8_100%)] pt-28 text-white">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.16),transparent_26%),radial-gradient(circle_at_bottom_right,rgba(255,255,255,0.12),transparent_30%)]" />
         <div className="relative mx-auto max-w-6xl px-4 pb-16 sm:px-6 lg:px-8">
           <ScrollReveal>

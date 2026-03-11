@@ -15,7 +15,7 @@ export default function AllSpecialitiesPage() {
       <div className="relative z-10 min-h-screen">
         <Header />
 
-        <div className="max-w-7xl mx-auto px-4 py-12">
+        <div className="max-w-7xl mt-18 mx-auto px-4 py-12">
 
           {/* ================= HERO ================= */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
