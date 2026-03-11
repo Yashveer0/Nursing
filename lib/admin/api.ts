@@ -51,6 +51,25 @@ export type SubAdminUser = {
   updatedAt: string;
 };
 
+export type AdminBlog = {
+  _id: string;
+  title: string;
+  slug: string;
+  content: string;
+  metaTitle?: string;
+  metaDescription?: string;
+  featuredImage?: string;
+  schemaToggle: boolean;
+  status: 'DRAFT' | 'PUBLISHED';
+  createdAt: string;
+  updatedAt: string;
+  createdBy?: {
+    _id: string;
+    name: string;
+    email: string;
+  };
+};
+
 type JobsResponseData = {
   jobs: AdminJob[];
 };
@@ -62,6 +81,16 @@ type JobApplicationsResponseData = {
 
 type SubAdminsResponseData = {
   subAdmins: SubAdminUser[];
+};
+
+type BlogsResponseData = {
+  blogs: AdminBlog[];
+  pagination?: {
+    total: number;
+    page: number;
+    limit: number;
+    pages: number;
+  };
 };
 
 function getApiBaseUrl() {
@@ -169,6 +198,52 @@ export async function getApplicationsForJob(jobId: string) {
 export async function getSubAdmins() {
   const response = await request<SubAdminsResponseData>('/admin/subadmins');
   return response.data?.subAdmins ?? [];
+}
+
+export async function getAdminBlogs() {
+  const response = await request<BlogsResponseData>('/blogs');
+  return response.data?.blogs ?? [];
+}
+
+export async function createAdminBlog(payload: {
+  title: string;
+  slug: string;
+  content: string;
+  metaTitle?: string;
+  metaDescription?: string;
+  featuredImage?: string;
+  schemaToggle?: boolean;
+  status?: 'DRAFT' | 'PUBLISHED';
+}) {
+  return request('/blogs', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateAdminBlog(
+  id: string,
+  payload: {
+    title?: string;
+    slug?: string;
+    content?: string;
+    metaTitle?: string;
+    metaDescription?: string;
+    featuredImage?: string;
+    schemaToggle?: boolean;
+    status?: 'DRAFT' | 'PUBLISHED';
+  }
+) {
+  return request(`/blogs/id/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteAdminBlog(id: string) {
+  return request(`/blogs/id/${id}`, {
+    method: 'DELETE',
+  });
 }
 
 export async function createSubAdmin(payload: {

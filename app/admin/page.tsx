@@ -5,10 +5,10 @@ import { useRouter } from 'next/navigation';
 import {
   BriefcaseBusiness,
   ClipboardList,
+  FileText,
   LayoutDashboard,
   LogOut,
   Shield,
-  Users,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,27 +16,33 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/components/auth/auth-provider';
 import {
+  createAdminBlog,
   createAdminJob,
   createSubAdmin,
+  deleteAdminBlog,
   deleteAdminJob,
   deleteSubAdmin,
+  getAdminBlogs,
   getAdminJobs,
   getApplicationsForJob,
   getSubAdmins,
   isAdminUser,
+  updateAdminBlog,
   updateAdminJob,
   updateSubAdminStatus,
+  type AdminBlog,
   type AdminJob,
   type JobApplication,
   type SubAdminUser,
 } from '@/lib/admin/api';
 import { readAuthSession } from '@/lib/userAuth/storage';
 
-type AdminTab = 'overview' | 'jobs' | 'applications' | 'subadmins';
+type AdminTab = 'overview' | 'jobs' | 'blogs' | 'applications' | 'subadmins';
 
 const tabs: Array<{ id: AdminTab; label: string; icon: typeof LayoutDashboard }> = [
   { id: 'overview', label: 'Overview', icon: LayoutDashboard },
   { id: 'jobs', label: 'Jobs', icon: BriefcaseBusiness },
+  { id: 'blogs', label: 'Blogs', icon: FileText },
   { id: 'applications', label: 'Applications', icon: ClipboardList },
   { id: 'subadmins', label: 'Sub-Admins', icon: Shield },
 ];
@@ -46,10 +52,12 @@ export default function AdminPage() {
   const { user, isReady, login, logout } = useAuth();
   const [activeTab, setActiveTab] = useState<AdminTab>('overview');
   const [jobs, setJobs] = useState<AdminJob[]>([]);
+  const [blogs, setBlogs] = useState<AdminBlog[]>([]);
   const [subAdmins, setSubAdmins] = useState<SubAdminUser[]>([]);
   const [applications, setApplications] = useState<JobApplication[]>([]);
   const [selectedJobId, setSelectedJobId] = useState('');
   const [editingJobId, setEditingJobId] = useState('');
+  const [editingBlogId, setEditingBlogId] = useState('');
   const [loadingDashboard, setLoadingDashboard] = useState(false);
   const [loadingApplications, setLoadingApplications] = useState(false);
   const [pageError, setPageError] = useState('');
@@ -81,12 +89,14 @@ export default function AdminPage() {
     setPageError('');
 
     try {
-      const [jobData, subAdminData] = await Promise.all([
+      const [jobData, blogData, subAdminData] = await Promise.all([
         getAdminJobs(),
+        getAdminBlogs(),
         user.role === 'ADMIN' ? getSubAdmins() : Promise.resolve([]),
       ]);
 
       setJobs(jobData);
+      setBlogs(blogData);
       setSubAdmins(subAdminData);
 
       if (!selectedJobId && jobData.length > 0) {
@@ -156,6 +166,33 @@ export default function AdminPage() {
     }
   }
 
+  async function handleCreateBlog(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setActionMessage('');
+    setPageError('');
+
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
+
+    try {
+      await createAdminBlog({
+        title: String(form.get('title') || ''),
+        slug: String(form.get('slug') || ''),
+        content: String(form.get('content') || ''),
+        metaTitle: String(form.get('metaTitle') || ''),
+        metaDescription: String(form.get('metaDescription') || ''),
+        featuredImage: String(form.get('featuredImage') || ''),
+        status: String(form.get('status') || 'DRAFT') as 'DRAFT' | 'PUBLISHED',
+        schemaToggle: form.get('schemaToggle') === 'on',
+      });
+      formElement.reset();
+      setActionMessage('Blog created successfully.');
+      await refreshDashboard();
+    } catch (error) {
+      setPageError(error instanceof Error ? error.message : 'Unable to create blog.');
+    }
+  }
+
   async function handleCreateSubAdmin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setActionMessage('');
@@ -176,6 +213,32 @@ export default function AdminPage() {
       await refreshDashboard();
     } catch (error) {
       setPageError(error instanceof Error ? error.message : 'Unable to create sub-admin.');
+    }
+  }
+
+  async function handleUpdateBlog(event: FormEvent<HTMLFormElement>, blogId: string) {
+    event.preventDefault();
+    setActionMessage('');
+    setPageError('');
+
+    const form = new FormData(event.currentTarget);
+
+    try {
+      await updateAdminBlog(blogId, {
+        title: String(form.get('title') || ''),
+        slug: String(form.get('slug') || ''),
+        content: String(form.get('content') || ''),
+        metaTitle: String(form.get('metaTitle') || ''),
+        metaDescription: String(form.get('metaDescription') || ''),
+        featuredImage: String(form.get('featuredImage') || ''),
+        status: String(form.get('status') || 'DRAFT') as 'DRAFT' | 'PUBLISHED',
+        schemaToggle: form.get('schemaToggle') === 'on',
+      });
+      setEditingBlogId('');
+      setActionMessage('Blog updated successfully.');
+      await refreshDashboard();
+    } catch (error) {
+      setPageError(error instanceof Error ? error.message : 'Unable to update blog.');
     }
   }
 
@@ -200,6 +263,22 @@ export default function AdminPage() {
       await refreshDashboard();
     } catch (error) {
       setPageError(error instanceof Error ? error.message : 'Unable to update job.');
+    }
+  }
+
+  async function handleDeleteBlog(blogId: string) {
+    setActionMessage('');
+    setPageError('');
+
+    try {
+      await deleteAdminBlog(blogId);
+      if (editingBlogId === blogId) {
+        setEditingBlogId('');
+      }
+      setActionMessage('Blog deleted successfully.');
+      await refreshDashboard();
+    } catch (error) {
+      setPageError(error instanceof Error ? error.message : 'Unable to delete blog.');
     }
   }
 
@@ -287,6 +366,7 @@ export default function AdminPage() {
   }
 
   const openJobs = jobs.filter((job) => job.status === 'OPEN').length;
+  const publishedBlogs = blogs.filter((blog) => blog.status === 'PUBLISHED').length;
 
   return (
     <main className="min-h-screen bg-slate-100">
@@ -379,10 +459,16 @@ export default function AdminPage() {
             </Card>
           ) : (
             <>
-              {(activeTab === 'overview' || activeTab === 'jobs' || activeTab === 'applications') && (
+              {(activeTab === 'overview' || activeTab === 'jobs' || activeTab === 'blogs' || activeTab === 'applications') && (
                 <div className="mb-6 grid gap-4 md:grid-cols-3">
-                  <StatCard label="Total Jobs" value={String(jobs.length)} />
-                  <StatCard label="Open Jobs" value={String(openJobs)} />
+                  <StatCard
+                    label={activeTab === 'blogs' ? 'Total Blogs' : 'Total Jobs'}
+                    value={String(activeTab === 'blogs' ? blogs.length : jobs.length)}
+                  />
+                  <StatCard
+                    label={activeTab === 'blogs' ? 'Published Blogs' : 'Open Jobs'}
+                    value={String(activeTab === 'blogs' ? publishedBlogs : openJobs)}
+                  />
                   <StatCard
                     label="Sub-Admins"
                     value={user.role === 'ADMIN' ? String(subAdmins.length) : 'Restricted'}
@@ -416,6 +502,29 @@ export default function AdminPage() {
 
                   <Card>
                     <CardHeader>
+                      <CardTitle>Latest Blogs</CardTitle>
+                      <CardDescription>Backend data from `/api/blogs`</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {blogs.slice(0, 5).map((blog) => (
+                        <div key={blog._id} className="rounded-2xl border border-slate-200 p-4">
+                          <div className="flex items-center justify-between gap-3">
+                            <div>
+                              <p className="font-medium text-slate-900">{blog.title}</p>
+                              <p className="text-sm text-slate-500">/{blog.slug}</p>
+                            </div>
+                            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">
+                              {blog.status}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                      {blogs.length === 0 && <p className="text-sm text-slate-600">No blogs created yet.</p>}
+                    </CardContent>
+                  </Card>
+
+                  <Card className="xl:col-span-2">
+                    <CardHeader>
                       <CardTitle>Backend Review Summary</CardTitle>
                       <CardDescription>
                         Only real backend-supported modules are shown in this admin UI.
@@ -424,8 +533,9 @@ export default function AdminPage() {
                     <CardContent className="space-y-3 text-sm text-slate-600">
                       <p>`/api/auth/login` handles admin and sub-admin login based on `user.role`.</p>
                       <p>`/api/admin/*` supports sub-admin management for ADMIN users.</p>
+                      <p>`/api/blogs` now drives blog create, update, list, and admin-only delete.</p>
                       <p>`/api/jobs/admin/all` and `/api/applications/job/:jobId` drive jobs and applications.</p>
-                      <p>Old CMS, blog, testimonial, and lead tabs were not backed by the backend, so they were removed.</p>
+                      <p>CMS, testimonials, and leads remain outside the current backend contract, so they are still excluded.</p>
                     </CardContent>
                   </Card>
                 </div>
@@ -513,6 +623,135 @@ export default function AdminPage() {
                                 ) : (
                                   <span className="text-sm text-slate-500">
                                     Only ADMIN can edit or delete jobs.
+                                  </span>
+                                )}
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
+
+              {activeTab === 'blogs' && (
+                <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Create Blog</CardTitle>
+                      <CardDescription>Uses backend validation from `/api/blogs`.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <form onSubmit={handleCreateBlog} className="space-y-4">
+                        <Input name="title" placeholder="Blog title" required />
+                        <Input name="slug" placeholder="blog-slug" required />
+                        <Input name="metaTitle" placeholder="Meta title (optional)" />
+                        <Textarea
+                          name="metaDescription"
+                          placeholder="Meta description (optional)"
+                          className="min-h-[90px]"
+                        />
+                        <Input name="featuredImage" placeholder="Featured image URL (optional)" />
+                        <Input name="status" placeholder="DRAFT or PUBLISHED" defaultValue="DRAFT" required />
+                        <label className="flex items-center gap-3 rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700">
+                          <input
+                            type="checkbox"
+                            name="schemaToggle"
+                            defaultChecked
+                            className="h-4 w-4 rounded border-slate-300"
+                          />
+                          Enable article schema markup
+                        </label>
+                        <Textarea
+                          name="content"
+                          placeholder="Blog content"
+                          className="min-h-[220px]"
+                          required
+                        />
+                        <Button type="submit" className="w-full">Create Blog</Button>
+                      </form>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Blog Listings</CardTitle>
+                      <CardDescription>
+                        {user.role === 'ADMIN'
+                          ? 'Create, edit, and delete backend-managed blog posts.'
+                          : 'Create and edit backend-managed blog posts. Deletion is restricted to ADMIN users.'}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {blogs.length === 0 && (
+                        <p className="text-sm text-slate-600">No blogs found in the backend yet.</p>
+                      )}
+                      {blogs.map((blog) => (
+                        <div key={blog._id} className="rounded-2xl border border-slate-200 p-4">
+                          {editingBlogId === blog._id ? (
+                            <form onSubmit={(event) => handleUpdateBlog(event, blog._id)} className="space-y-3">
+                              <Input name="title" defaultValue={blog.title} required />
+                              <Input name="slug" defaultValue={blog.slug} required />
+                              <Input name="metaTitle" defaultValue={blog.metaTitle || ''} />
+                              <Textarea
+                                name="metaDescription"
+                                defaultValue={blog.metaDescription || ''}
+                                className="min-h-[90px]"
+                              />
+                              <Input name="featuredImage" defaultValue={blog.featuredImage || ''} />
+                              <Input name="status" defaultValue={blog.status} required />
+                              <label className="flex items-center gap-3 rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700">
+                                <input
+                                  type="checkbox"
+                                  name="schemaToggle"
+                                  defaultChecked={blog.schemaToggle}
+                                  className="h-4 w-4 rounded border-slate-300"
+                                />
+                                Enable article schema markup
+                              </label>
+                              <Textarea
+                                name="content"
+                                defaultValue={blog.content}
+                                className="min-h-[220px]"
+                                required
+                              />
+                              <div className="flex flex-wrap gap-2">
+                                <Button type="submit">Save Changes</Button>
+                                <Button type="button" variant="outline" onClick={() => setEditingBlogId('')}>
+                                  Cancel
+                                </Button>
+                              </div>
+                            </form>
+                          ) : (
+                            <>
+                              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                <div className="space-y-2">
+                                  <p className="font-medium text-slate-900">{blog.title}</p>
+                                  <p className="text-sm text-slate-500">Slug: /{blog.slug}</p>
+                                  <p className="text-sm text-slate-600">
+                                    {blog.metaTitle || 'No meta title'}{blog.metaDescription ? ` • ${blog.metaDescription}` : ''}
+                                  </p>
+                                  <p className="text-sm text-slate-600">{blog.content}</p>
+                                  <p className="text-xs text-slate-500">
+                                    Schema: {blog.schemaToggle ? 'Enabled' : 'Disabled'}
+                                  </p>
+                                </div>
+                                <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">
+                                  {blog.status}
+                                </span>
+                              </div>
+                              <div className="mt-4 flex flex-wrap gap-2">
+                                <Button variant="outline" onClick={() => setEditingBlogId(blog._id)}>
+                                  Edit Blog
+                                </Button>
+                                {user.role === 'ADMIN' ? (
+                                  <Button variant="destructive" onClick={() => handleDeleteBlog(blog._id)}>
+                                    Delete Blog
+                                  </Button>
+                                ) : (
+                                  <span className="text-sm text-slate-500">
+                                    Only ADMIN can delete blogs.
                                   </span>
                                 )}
                               </div>
