@@ -11,6 +11,12 @@ import { Button } from '@/components/ui/button';
 import { ScrollReveal } from '@/components/animations/scroll-reveal';
 
 export default function ContactPage() {
+  const contactDetails = {
+    generalPhone: '+91 9560505355',
+    emergencyPhone: '+91 8766382620',
+    email: 'care@nursingsarathi.com',
+  };
+
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -80,19 +86,19 @@ export default function ContactPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-10">
             <Card className="p-6 hover:-translate-y-1 transition-transform duration-300">
-              <p className="text-xs font-semibold text-gray-500 mb-2">CARE HOTLINE</p>
-              <p className="font-bold text-lg">+91 8800-222-111</p>
-              <p className="text-sm text-gray-600 mt-1">24x7 nurse triage desk for urgent needs.</p>
+              <p className="text-xs font-semibold text-gray-500 mb-2">GENERAL ENQUIRIES</p>
+              <p className="font-bold text-lg">{contactDetails.generalPhone}</p>
+              <p className="text-sm text-gray-600 mt-1">Primary contact number for home care support.</p>
             </Card>
             <Card className="p-6 hover:-translate-y-1 transition-transform duration-300">
               <p className="text-xs font-semibold text-gray-500 mb-2">CARE CONCIERGE EMAIL</p>
-              <p className="font-bold text-lg">hello@nursingsarathi.com</p>
+              <p className="font-bold text-lg">{contactDetails.email}</p>
               <p className="text-sm text-gray-600 mt-1">Share reports, requests, or partnerships.</p>
             </Card>
             <Card className="p-6 hover:-translate-y-1 transition-transform duration-300">
-              <p className="text-xs font-semibold text-gray-500 mb-2">WALK-IN HOURS</p>
-              <p className="font-bold text-lg">Mon-Sat | 9am to 7pm</p>
-              <p className="text-sm text-gray-600 mt-1">Sector 44, Gurugram | Appointment preferred</p>
+              <p className="text-xs font-semibold text-gray-500 mb-2">EMERGENCY HOTLINE</p>
+              <p className="font-bold text-lg">{contactDetails.emergencyPhone}</p>
+              <p className="text-sm text-gray-600 mt-1">Immediate assistance for urgent care coordination.</p>
             </Card>
           </div>
         </div>
@@ -112,10 +118,13 @@ export default function ContactPage() {
             </p>
             <div className="text-sm text-gray-700 space-y-2">
               <p>
-                <strong>Phone:</strong> +91 8800-222-111
+                <strong>General Enquiries:</strong> {contactDetails.generalPhone}
               </p>
               <p>
-                <strong>Email:</strong> hello@nursingsarathi.com
+                <strong>Emergency Hotline:</strong> {contactDetails.emergencyPhone}
+              </p>
+              <p>
+                <strong>Email:</strong> {contactDetails.email}
               </p>
               <p>
                 <strong>Web:</strong> nursingsarathi.com
@@ -152,12 +161,12 @@ export default function ContactPage() {
               Mohali / Chandigarh Office
             </p>
             <p className="text-sm text-gray-600">GM Plaza, 3rd Floor, Sector 77, Mohali</p>
-            <p className="text-sm mt-2">hello@nursingsarathi.com</p>
+            <p className="text-sm mt-2">{contactDetails.email}</p>
           </Card>
 
           <Card className="p-6 bg-blue-50 hover:-translate-y-1 transition-transform duration-300">
             <p className="text-xs font-semibold text-gray-500 mb-1">NEED URGENT HELP?</p>
-            <p className="text-2xl font-bold text-blue-900">+91 8800-222-111</p>
+            <p className="text-2xl font-bold text-blue-900">{contactDetails.emergencyPhone}</p>
             <p className="text-sm text-gray-600 mt-2">
               Nurse triage desk, average response 42 seconds. We coordinate ambulances and hospital
               admissions.

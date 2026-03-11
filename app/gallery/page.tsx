@@ -7,37 +7,42 @@ import { useEffect, useRef } from "react";
 
 const images = [
   {
-    src: "https://images.unsplash.com/photo-1586773860418-d37222d8fce3",
+    src: "/images/blogs/g1.jpeg",
     height: "row-span-2",
   },
   {
-    src: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee",
+    src: "/images/blogs/g2.jpeg",
     height: "row-span-1",
   },
   {
-    src: "https://images.unsplash.com/photo-1529156069898-49953e39b3ac",
+    src: "/images/blogs/g3.jpeg",
     height: "row-span-2",
   },
   {
-    src: "https://images.unsplash.com/photo-1516574187841-cb9cc2ca948b",
+    src: "/images/blogs/g4.jpeg",
     height: "row-span-1",
   },
   {
-    src: "https://images.unsplash.com/photo-1501785888041-af3ef285b470",
+    src: "/images/blogs/g5.jpeg",
     height: "row-span-2",
   },
   {
-    src: "https://images.unsplash.com/photo-1530497610245-94d3c16cda28",
+    src: "/images/blogs/g6.jpeg",
     height: "row-span-1",
   },
   {
-    src: "https://images.unsplash.com/photo-1516574187841-cb9cc2ca948b",
+    src: "/images/blogs/g7.jpeg",
+    height: "row-span-1",
+  },
+  
+  {
+    src: "/images/blogs/g9.jpeg",
     height: "row-span-1",
   },
   {
-    src: "https://images.unsplash.com/photo-1519681393784-d120267933ba",
+    src: "/images/blogs/g10.jpeg",
     height: "row-span-2",
-  },
+  }
 ];
 
 export default function GalleryPage() {

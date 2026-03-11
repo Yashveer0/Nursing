@@ -120,7 +120,8 @@ export default function Header() {
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState<string | null>(null);
 
-  const { isAuthenticated, isReady, logout } = useAuth();
+  const { user, isAuthenticated, isReady, logout } = useAuth();
+  const profileLabel = user?.name?.trim() || 'Profile';
 
   const toggle = (key: string) =>
     setActive(active === key ? null : key);
@@ -174,9 +175,9 @@ export default function Header() {
               {isReady && isAuthenticated && (
                 <>
                   <Link href="/profile">
-                    <Button variant="outline" className="h-10 rounded-full px-4 text-sm">
+                    <Button variant="outline" className="h-10 max-w-[220px] rounded-full px-4 text-sm">
                       <User className="h-4 w-4 mr-2" />
-                      Profile
+                      <span className="truncate">{profileLabel}</span>
                     </Button>
                   </Link>
 
@@ -308,7 +309,7 @@ export default function Header() {
                     <Link href="/profile" onClick={() => setOpen(false)} className="block">
                       <Button variant="outline" className="w-full rounded-full">
                         <User className="h-4 w-4 mr-2" />
-                        Profile
+                        <span className="truncate">{profileLabel}</span>
                       </Button>
                     </Link>
                     <Button
