@@ -1,61 +1,17 @@
 'use client';
 
-import React, { useState } from 'react';
 import Image from 'next/image';
 import Header from '@/components/header';
 import { Footer } from '@/components/footer';
 import { Card } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Button } from '@/components/ui/button';
 import { ScrollReveal } from '@/components/animations/scroll-reveal';
+import { CallbackForm } from '@/components/callback-form';
 
 export default function ContactPage() {
   const contactDetails = {
     generalPhone: '+91 9560505355',
     emergencyPhone: '+91 8766382620',
     email: 'care@nursingsarathi.com',
-  };
-
-  const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    subject: '',
-    message: '',
-  });
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    try {
-      const res = await fetch('/api/contact', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
-      });
-      const data = await res.json();
-
-      if (data.success) {
-        alert('Message sent successfully.');
-        setFormData({
-          firstName: '',
-          lastName: '',
-          email: '',
-          subject: '',
-          message: '',
-        });
-      } else {
-        alert('Something went wrong.');
-      }
-    } catch {
-      alert('Server error.');
-    }
   };
 
   return (
@@ -133,20 +89,12 @@ export default function ContactPage() {
           </ScrollReveal>
 
           <ScrollReveal delay={0.08}>
-            <Card className="p-5 sm:p-8">
-              <form onSubmit={handleSubmit} className="space-y-5">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Input name="firstName" placeholder="First Name" value={formData.firstName} onChange={handleChange} required />
-                  <Input name="lastName" placeholder="Last Name" value={formData.lastName} onChange={handleChange} required />
-                </div>
-                <Input name="email" type="email" placeholder="Email" value={formData.email} onChange={handleChange} required />
-                <Input name="subject" placeholder="Subject" value={formData.subject} onChange={handleChange} required />
-                <Textarea name="message" placeholder="Message" value={formData.message} onChange={handleChange} className="min-h-[140px]" required />
-                <Button className="w-full bg-blue-900 hover:bg-blue-800 hover:scale-[1.01] active:scale-[0.98] transition-transform">
-                  Send Message
-                </Button>
-              </form>
-            </Card>
+            <CallbackForm
+              eyebrow="Care Enquiry"
+              title="Tell us the care you need"
+              buttonLabel="Send Enquiry"
+              className="max-w-none p-5 sm:p-8"
+            />
           </ScrollReveal>
         </div>
       </section>

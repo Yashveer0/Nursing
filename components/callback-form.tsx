@@ -6,20 +6,40 @@ import { useState } from 'react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
+import { createEnquiry } from '@/lib/enquiries/api';
+import { cn } from '@/lib/utils';
 
 import { motion } from "framer-motion"
 
+type CallbackFormProps = {
+  eyebrow?: string;
+  title?: string;
+  buttonLabel?: string;
+  className?: string;
+};
 
-export function CallbackForm() {
+const initialFormData = {
+  name: '',
+  phone: '',
+  state: '',
+  city: '',
+  serviceRequired: '',
+  whenRequired: '',
+  patientCondition: '',
+};
+
+export function CallbackForm({
+  eyebrow = 'Request a Callback',
+  title = 'Homecare Assistance',
+  buttonLabel = 'Submit',
+  className = '',
+}: CallbackFormProps) {
   const [formData, setFormData] = useState({
-    name: '',
-    phone: '',
-    state: '',
-    city: '',
-    serviceRequired: '',
-    whenRequired: '',
-    patientCondition: '',
+    ...initialFormData,
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
+  const [submitSuccess, setSubmitSuccess] = useState('');
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -28,19 +48,44 @@ export function CallbackForm() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Form submitted:', formData);
-    // Add form submission logic here
-    setFormData({
-      name: '',
-      phone: '',
-      state: '',
-      city: '',
-      serviceRequired: '',
-      whenRequired: '',
-      patientCondition: '',
-    });
+    setSubmitError('');
+    setSubmitSuccess('');
+
+    const payload = {
+      name: formData.name.trim(),
+      phone: formData.phone.trim(),
+      state: formData.state.trim(),
+      city: formData.city.trim(),
+      serviceRequired: formData.serviceRequired.trim(),
+      whenRequired: formData.whenRequired.trim(),
+      patientCondition: formData.patientCondition.trim() || undefined,
+    };
+
+    if (!payload.name || payload.name.length < 2) {
+      setSubmitError('Name must be at least 2 characters.');
+      return;
+    }
+
+    if (!payload.phone) {
+      setSubmitError('Phone number is required.');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const response = await createEnquiry(payload);
+      setSubmitSuccess(response.message || 'Enquiry submitted successfully.');
+      setFormData({ ...initialFormData });
+    } catch (error) {
+      setSubmitError(
+        error instanceof Error ? error.message : 'Unable to submit enquiry.'
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -52,14 +97,17 @@ export function CallbackForm() {
   initial={{ opacity: 0, y: 40 }}
   animate={{ opacity: 1, y: 0 }}
   transition={{ duration: 0.5 }}
-  className="bg-white rounded-3xl shadow-xl p-5 border border-border/10 max-w-xl w-full mx-auto"
+  className={cn(
+    'bg-white rounded-3xl shadow-xl p-5 border border-border/10 max-w-xl w-full mx-auto',
+    className
+  )}
 >
   <div className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-1">
-    Request a Callback
+    {eyebrow}
   </div>
 
   <h3 className="text-2xl font-bold text-foreground mb-4">
-    Homecare Assistance
+    {title}
   </h3>
 
   <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -89,7 +137,12 @@ export function CallbackForm() {
         type="tel"
         name="phone"
         value={formData.phone}
-        onChange={handleChange}
+        onChange={(event) =>
+          setFormData((prev) => ({
+            ...prev,
+            phone: event.target.value.replace(/[^\d+\s()-]/g, ''),
+          }))
+        }
         placeholder="Phone number"
         className="rounded-lg bg-muted"
         required
@@ -176,11 +229,18 @@ export function CallbackForm() {
 
     {/* BUTTON */}
     <div className="md:col-span-2">
+      {submitError && (
+        <p className="mb-3 text-sm text-red-600">{submitError}</p>
+      )}
+      {!submitError && submitSuccess && (
+        <p className="mb-3 text-sm text-emerald-600">{submitSuccess}</p>
+      )}
       <Button
         type="submit"
+        disabled={isSubmitting}
         className="w-full bg-primary hover:bg-primary/90 text-white font-semibold py-2.5 rounded-full"
       >
-        Submit
+        {isSubmitting ? 'Submitting...' : buttonLabel}
       </Button>
     </div>
 

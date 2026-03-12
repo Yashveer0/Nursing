@@ -70,6 +70,23 @@ export type AdminBlog = {
   };
 };
 
+export type EnquiryStatus = 'PENDING' | 'CONTACTED' | 'RESOLVED';
+
+export type AdminEnquiry = {
+  _id: string;
+  name: string;
+  phone: string;
+  state: string;
+  city: string;
+  serviceRequired: string;
+  whenRequired: string;
+  patientCondition?: string;
+  status: EnquiryStatus;
+  remarks?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
 type JobsResponseData = {
   jobs: AdminJob[];
 };
@@ -89,6 +106,15 @@ type BlogsResponseData = {
     total: number;
     page: number;
     limit: number;
+    pages: number;
+  };
+};
+
+type EnquiriesResponseData = {
+  enquiries: AdminEnquiry[];
+  pagination: {
+    total: number;
+    page: number;
     pages: number;
   };
 };
@@ -195,6 +221,16 @@ export async function getApplicationsForJob(jobId: string) {
   return response.data?.applications ?? [];
 }
 
+export async function updateJobApplicationStatus(
+  id: string,
+  status: JobApplication['status']
+) {
+  return request(`/applications/${id}/status`, {
+    method: 'PUT',
+    body: JSON.stringify({ status }),
+  });
+}
+
 export async function getSubAdmins() {
   const response = await request<SubAdminsResponseData>('/admin/subadmins');
   return response.data?.subAdmins ?? [];
@@ -267,6 +303,62 @@ export async function updateSubAdminStatus(id: string, isActive: boolean) {
 
 export async function deleteSubAdmin(id: string) {
   return request(`/admin/subadmin/${id}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function getAdminEnquiries(params?: {
+  page?: number;
+  limit?: number;
+  status?: EnquiryStatus;
+  search?: string;
+}) {
+  const query = new URLSearchParams();
+
+  if (params?.page) {
+    query.set('page', String(params.page));
+  }
+
+  if (params?.limit) {
+    query.set('limit', String(params.limit));
+  }
+
+  if (params?.status) {
+    query.set('status', params.status);
+  }
+
+  if (params?.search?.trim()) {
+    query.set('search', params.search.trim());
+  }
+
+  const suffix = query.toString() ? `?${query.toString()}` : '';
+  const response = await request<EnquiriesResponseData>(`/enquiries${suffix}`);
+
+  return {
+    enquiries: response.data?.enquiries ?? [],
+    pagination: response.data?.pagination ?? {
+      total: 0,
+      page: params?.page ?? 1,
+      pages: 1,
+    },
+  };
+}
+
+export async function updateAdminEnquiryStatus(
+  id: string,
+  payload: {
+    status: EnquiryStatus;
+    remarks?: string;
+  }
+) {
+  return request<AdminEnquiry>(`/enquiries/${id}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteAdminEnquiry(id: string) {
+  return request(`/enquiries/${id}`, {
     method: 'DELETE',
   });
 }

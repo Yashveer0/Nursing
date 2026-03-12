@@ -8,6 +8,7 @@ import {
   FileText,
   LayoutDashboard,
   LogOut,
+  PhoneCall,
   Shield,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -20,32 +21,52 @@ import {
   createAdminJob,
   createSubAdmin,
   deleteAdminBlog,
+  deleteAdminEnquiry,
   deleteAdminJob,
   deleteSubAdmin,
   getAdminBlogs,
+  getAdminEnquiries,
   getAdminJobs,
   getApplicationsForJob,
   getSubAdmins,
   isAdminUser,
+  updateAdminEnquiryStatus,
+  updateJobApplicationStatus,
   updateAdminBlog,
   updateAdminJob,
   updateSubAdminStatus,
   type AdminBlog,
+  type AdminEnquiry,
   type AdminJob,
+  type EnquiryStatus,
   type JobApplication,
   type SubAdminUser,
 } from '@/lib/admin/api';
 import { readAuthSession } from '@/lib/userAuth/storage';
 
-type AdminTab = 'overview' | 'jobs' | 'blogs' | 'applications' | 'subadmins';
+type AdminTab = 'overview' | 'jobs' | 'blogs' | 'applications' | 'leads' | 'subadmins';
 
 const tabs: Array<{ id: AdminTab; label: string; icon: typeof LayoutDashboard }> = [
   { id: 'overview', label: 'Overview', icon: LayoutDashboard },
   { id: 'jobs', label: 'Jobs', icon: BriefcaseBusiness },
   { id: 'blogs', label: 'Blogs', icon: FileText },
   { id: 'applications', label: 'Applications', icon: ClipboardList },
+  { id: 'leads', label: 'Leads', icon: PhoneCall },
   { id: 'subadmins', label: 'Sub-Admins', icon: Shield },
 ];
+
+const applicationStatusStyles: Record<JobApplication['status'], string> = {
+  Applied: 'bg-slate-100 text-slate-700',
+  Shortlisted: 'bg-amber-100 text-amber-800',
+  Rejected: 'bg-red-100 text-red-700',
+  Hired: 'bg-emerald-100 text-emerald-700',
+};
+
+const enquiryStatusStyles: Record<EnquiryStatus, string> = {
+  PENDING: 'bg-blue-100 text-blue-700',
+  CONTACTED: 'bg-amber-100 text-amber-800',
+  RESOLVED: 'bg-emerald-100 text-emerald-700',
+};
 
 export default function AdminPage() {
   const router = useRouter();
@@ -55,11 +76,24 @@ export default function AdminPage() {
   const [blogs, setBlogs] = useState<AdminBlog[]>([]);
   const [subAdmins, setSubAdmins] = useState<SubAdminUser[]>([]);
   const [applications, setApplications] = useState<JobApplication[]>([]);
+  const [enquiries, setEnquiries] = useState<AdminEnquiry[]>([]);
+  const [enquiryTotal, setEnquiryTotal] = useState(0);
+  const [enquiryPages, setEnquiryPages] = useState(1);
+  const [enquiryPage, setEnquiryPage] = useState(1);
+  const [enquirySearch, setEnquirySearch] = useState('');
+  const [enquiryStatusFilter, setEnquiryStatusFilter] = useState<'ALL' | EnquiryStatus>('ALL');
   const [selectedJobId, setSelectedJobId] = useState('');
   const [editingJobId, setEditingJobId] = useState('');
   const [editingBlogId, setEditingBlogId] = useState('');
   const [loadingDashboard, setLoadingDashboard] = useState(false);
   const [loadingApplications, setLoadingApplications] = useState(false);
+  const [loadingEnquiries, setLoadingEnquiries] = useState(false);
+  const [updatingApplicationId, setUpdatingApplicationId] = useState('');
+  const [updatingApplicationStatus, setUpdatingApplicationStatus] = useState<
+    Extract<JobApplication['status'], 'Shortlisted' | 'Rejected'> | ''
+  >('');
+  const [updatingEnquiryId, setUpdatingEnquiryId] = useState('');
+  const [deletingEnquiryId, setDeletingEnquiryId] = useState('');
   const [pageError, setPageError] = useState('');
   const [actionMessage, setActionMessage] = useState('');
 
@@ -80,6 +114,14 @@ export default function AdminPage() {
     void loadApplications(selectedJobId);
   }, [isReady, selectedJobId, user]);
 
+  useEffect(() => {
+    if (!isReady || !isAdminUser(user)) {
+      return;
+    }
+
+    void loadEnquiries(enquiryPage, enquiryStatusFilter, enquirySearch);
+  }, [enquiryPage, enquirySearch, enquiryStatusFilter, isReady, user]);
+
   async function refreshDashboard() {
     if (!isAdminUser(user)) {
       return;
@@ -89,15 +131,20 @@ export default function AdminPage() {
     setPageError('');
 
     try {
-      const [jobData, blogData, subAdminData] = await Promise.all([
+      const [jobData, blogData, subAdminData, enquiryData] = await Promise.all([
         getAdminJobs(),
         getAdminBlogs(),
         user.role === 'ADMIN' ? getSubAdmins() : Promise.resolve([]),
+        getAdminEnquiries({ page: 1, limit: 10 }),
       ]);
 
       setJobs(jobData);
       setBlogs(blogData);
       setSubAdmins(subAdminData);
+      setEnquiries(enquiryData.enquiries);
+      setEnquiryTotal(enquiryData.pagination.total);
+      setEnquiryPage(enquiryData.pagination.page);
+      setEnquiryPages(enquiryData.pagination.pages);
 
       if (!selectedJobId && jobData.length > 0) {
         setSelectedJobId(jobData[0]._id);
@@ -106,6 +153,30 @@ export default function AdminPage() {
       setPageError(error instanceof Error ? error.message : 'Unable to load admin dashboard.');
     } finally {
       setLoadingDashboard(false);
+    }
+  }
+
+  async function loadEnquiries(
+    page: number,
+    status: 'ALL' | EnquiryStatus,
+    search: string
+  ) {
+    setLoadingEnquiries(true);
+
+    try {
+      const data = await getAdminEnquiries({
+        page,
+        limit: 10,
+        status: status === 'ALL' ? undefined : status,
+        search,
+      });
+      setEnquiries(data.enquiries);
+      setEnquiryTotal(data.pagination.total);
+      setEnquiryPages(data.pagination.pages);
+    } catch (error) {
+      setPageError(error instanceof Error ? error.message : 'Unable to load enquiries.');
+    } finally {
+      setLoadingEnquiries(false);
     }
   }
 
@@ -328,6 +399,81 @@ export default function AdminPage() {
     }
   }
 
+  async function handleEnquiryStatusSubmit(
+    event: FormEvent<HTMLFormElement>,
+    enquiryId: string
+  ) {
+    event.preventDefault();
+    setActionMessage('');
+    setPageError('');
+    setUpdatingEnquiryId(enquiryId);
+
+    const form = new FormData(event.currentTarget);
+
+    try {
+      const status = String(form.get('status') || 'PENDING') as EnquiryStatus;
+      const remarks = String(form.get('remarks') || '').trim();
+
+      await updateAdminEnquiryStatus(enquiryId, {
+        status,
+        remarks: remarks || undefined,
+      });
+
+      setActionMessage('Lead status updated successfully.');
+      await loadEnquiries(enquiryPage, enquiryStatusFilter, enquirySearch);
+    } catch (error) {
+      setPageError(error instanceof Error ? error.message : 'Unable to update lead status.');
+    } finally {
+      setUpdatingEnquiryId('');
+    }
+  }
+
+  async function handleDeleteEnquiry(enquiryId: string) {
+    setActionMessage('');
+    setPageError('');
+    setDeletingEnquiryId(enquiryId);
+
+    try {
+      await deleteAdminEnquiry(enquiryId);
+      setActionMessage('Lead deleted successfully.');
+
+      const nextPage = enquiries.length === 1 && enquiryPage > 1 ? enquiryPage - 1 : enquiryPage;
+      setEnquiryPage(nextPage);
+      await loadEnquiries(nextPage, enquiryStatusFilter, enquirySearch);
+    } catch (error) {
+      setPageError(error instanceof Error ? error.message : 'Unable to delete lead.');
+    } finally {
+      setDeletingEnquiryId('');
+    }
+  }
+
+  async function handleApplicationStatusUpdate(
+    applicationId: string,
+    status: Extract<JobApplication['status'], 'Shortlisted' | 'Rejected'>
+  ) {
+    setActionMessage('');
+    setPageError('');
+    setUpdatingApplicationId(applicationId);
+    setUpdatingApplicationStatus(status);
+
+    try {
+      await updateJobApplicationStatus(applicationId, status);
+      setApplications((currentApplications) =>
+        currentApplications.map((application) =>
+          application._id === applicationId ? { ...application, status } : application
+        )
+      );
+      setActionMessage(`Application ${status.toLowerCase()} successfully.`);
+    } catch (error) {
+      setPageError(
+        error instanceof Error ? error.message : 'Unable to update application status.'
+      );
+    } finally {
+      setUpdatingApplicationId('');
+      setUpdatingApplicationStatus('');
+    }
+  }
+
   if (!isReady) {
     return null;
   }
@@ -367,6 +513,7 @@ export default function AdminPage() {
 
   const openJobs = jobs.filter((job) => job.status === 'OPEN').length;
   const publishedBlogs = blogs.filter((blog) => blog.status === 'PUBLISHED').length;
+  const pendingEnquiries = enquiries.filter((enquiry) => enquiry.status === 'PENDING').length;
 
   return (
     <main className="min-h-screen bg-slate-100">
@@ -459,19 +606,31 @@ export default function AdminPage() {
             </Card>
           ) : (
             <>
-              {(activeTab === 'overview' || activeTab === 'jobs' || activeTab === 'blogs' || activeTab === 'applications') && (
+              {(activeTab === 'overview' || activeTab === 'jobs' || activeTab === 'blogs' || activeTab === 'applications' || activeTab === 'leads') && (
                 <div className="mb-6 grid gap-4 md:grid-cols-3">
                   <StatCard
-                    label={activeTab === 'blogs' ? 'Total Blogs' : 'Total Jobs'}
-                    value={String(activeTab === 'blogs' ? blogs.length : jobs.length)}
+                    label={
+                      activeTab === 'blogs'
+                        ? 'Total Blogs'
+                        : activeTab === 'leads'
+                          ? 'Total Leads'
+                          : 'Total Jobs'
+                    }
+                    value={String(activeTab === 'blogs' ? blogs.length : activeTab === 'leads' ? enquiryTotal : jobs.length)}
                   />
                   <StatCard
-                    label={activeTab === 'blogs' ? 'Published Blogs' : 'Open Jobs'}
-                    value={String(activeTab === 'blogs' ? publishedBlogs : openJobs)}
+                    label={
+                      activeTab === 'blogs'
+                        ? 'Published Blogs'
+                        : activeTab === 'leads'
+                          ? 'Pending On Page'
+                          : 'Open Jobs'
+                    }
+                    value={String(activeTab === 'blogs' ? publishedBlogs : activeTab === 'leads' ? pendingEnquiries : openJobs)}
                   />
                   <StatCard
-                    label="Sub-Admins"
-                    value={user.role === 'ADMIN' ? String(subAdmins.length) : 'Restricted'}
+                    label={activeTab === 'leads' ? 'Current Page' : 'Sub-Admins'}
+                    value={activeTab === 'leads' ? `${enquiryPage}/${Math.max(enquiryPages, 1)}` : user.role === 'ADMIN' ? String(subAdmins.length) : 'Restricted'}
                   />
                 </div>
               )}
@@ -523,6 +682,35 @@ export default function AdminPage() {
                     </CardContent>
                   </Card>
 
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Latest Leads</CardTitle>
+                      <CardDescription>Backend data from `/api/enquiries`</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {enquiries.slice(0, 5).map((enquiry) => (
+                        <div key={enquiry._id} className="rounded-2xl border border-slate-200 p-4">
+                          <div className="flex items-center justify-between gap-3">
+                            <div>
+                              <p className="font-medium text-slate-900">{enquiry.name}</p>
+                              <p className="text-sm text-slate-500">
+                                {enquiry.city}, {enquiry.state}
+                              </p>
+                            </div>
+                            <span
+                              className={`rounded-full px-3 py-1 text-xs font-medium ${enquiryStatusStyles[enquiry.status]}`}
+                            >
+                              {enquiry.status}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                      {enquiries.length === 0 && (
+                        <p className="text-sm text-slate-600">No leads found in the backend yet.</p>
+                      )}
+                    </CardContent>
+                  </Card>
+
                   <Card className="xl:col-span-2">
                     <CardHeader>
                       <CardTitle>Backend Review Summary</CardTitle>
@@ -535,7 +723,7 @@ export default function AdminPage() {
                       <p>`/api/admin/*` supports sub-admin management for ADMIN users.</p>
                       <p>`/api/blogs` now drives blog create, update, list, and admin-only delete.</p>
                       <p>`/api/jobs/admin/all` and `/api/applications/job/:jobId` drive jobs and applications.</p>
-                      <p>CMS, testimonials, and leads remain outside the current backend contract, so they are still excluded.</p>
+                      <p>`/api/enquiries` now drives lead listing, filtering, status updates, and admin-only deletion.</p>
                     </CardContent>
                   </Card>
                 </div>
@@ -810,7 +998,9 @@ export default function AdminPage() {
                               <p className="font-medium text-slate-900">{application.applicant.name}</p>
                               <p className="text-sm text-slate-500">{application.applicant.email}</p>
                             </div>
-                            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">
+                            <span
+                              className={`rounded-full px-3 py-1 text-xs font-medium ${applicationStatusStyles[application.status]}`}
+                            >
                               {application.status}
                             </span>
                           </div>
@@ -822,8 +1012,227 @@ export default function AdminPage() {
                             <span className="font-medium text-slate-800">Cover letter:</span>{' '}
                             {application.coverLetter || 'Not provided'}
                           </p>
+                          <div className="mt-4 flex flex-wrap gap-2">
+                            <Button
+                              variant={application.status === 'Shortlisted' ? 'default' : 'outline'}
+                              disabled={
+                                updatingApplicationId === application._id ||
+                                application.status === 'Shortlisted'
+                              }
+                              type="button"
+                              onClick={() =>
+                                handleApplicationStatusUpdate(application._id, 'Shortlisted')
+                              }
+                            >
+                              {updatingApplicationId === application._id &&
+                              updatingApplicationStatus === 'Shortlisted'
+                                ? 'Updating...'
+                                : 'Shortlist'}
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              disabled={
+                                updatingApplicationId === application._id ||
+                                application.status === 'Rejected'
+                              }
+                              type="button"
+                              onClick={() =>
+                                handleApplicationStatusUpdate(application._id, 'Rejected')
+                              }
+                            >
+                              {updatingApplicationId === application._id &&
+                              updatingApplicationStatus === 'Rejected'
+                                ? 'Updating...'
+                                : 'Reject'}
+                            </Button>
+                          </div>
                         </div>
                       ))}
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
+
+              {activeTab === 'leads' && (
+                <div className="grid gap-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Lead Filters</CardTitle>
+                      <CardDescription>
+                        Search and filter backend enquiries. Both `ADMIN` and `SUB_ADMIN` can read and update status.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="grid gap-4 md:grid-cols-[1fr_220px_auto]">
+                      <Input
+                        value={enquirySearch}
+                        onChange={(event) => {
+                          setEnquiryPage(1);
+                          setEnquirySearch(event.target.value);
+                        }}
+                        placeholder="Search by name, phone, city, or state"
+                      />
+                      <select
+                        value={enquiryStatusFilter}
+                        onChange={(event) => {
+                          setEnquiryPage(1);
+                          setEnquiryStatusFilter(event.target.value as 'ALL' | EnquiryStatus);
+                        }}
+                        className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700"
+                      >
+                        <option value="ALL">All statuses</option>
+                        <option value="PENDING">PENDING</option>
+                        <option value="CONTACTED">CONTACTED</option>
+                        <option value="RESOLVED">RESOLVED</option>
+                      </select>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          setEnquiryPage(1);
+                          setEnquirySearch('');
+                          setEnquiryStatusFilter('ALL');
+                        }}
+                      >
+                        Reset
+                      </Button>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Lead Listings</CardTitle>
+                      <CardDescription>
+                        {user.role === 'ADMIN'
+                          ? 'Admin can read, update status, and delete leads.'
+                          : 'Sub-admin can read and update status. Deletion is restricted to ADMIN users.'}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {loadingEnquiries && (
+                        <p className="text-sm text-slate-600">Loading leads...</p>
+                      )}
+                      {!loadingEnquiries && enquiries.length === 0 && (
+                        <p className="text-sm text-slate-600">No leads found for the current filters.</p>
+                      )}
+                      {!loadingEnquiries &&
+                        enquiries.map((enquiry) => (
+                          <div key={enquiry._id} className="rounded-2xl border border-slate-200 p-4">
+                            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                              <div className="space-y-2">
+                                <div className="flex flex-wrap items-center gap-3">
+                                  <p className="font-medium text-slate-900">{enquiry.name}</p>
+                                  <span
+                                    className={`rounded-full px-3 py-1 text-xs font-medium ${enquiryStatusStyles[enquiry.status]}`}
+                                  >
+                                    {enquiry.status}
+                                  </span>
+                                </div>
+                                <p className="text-sm text-slate-500">{enquiry.phone}</p>
+                                <p className="text-sm text-slate-600">
+                                  <span className="font-medium text-slate-800">Location:</span>{' '}
+                                  {enquiry.city}, {enquiry.state}
+                                </p>
+                                <p className="text-sm text-slate-600">
+                                  <span className="font-medium text-slate-800">Service:</span>{' '}
+                                  {enquiry.serviceRequired}
+                                </p>
+                                <p className="text-sm text-slate-600">
+                                  <span className="font-medium text-slate-800">When Required:</span>{' '}
+                                  {enquiry.whenRequired}
+                                </p>
+                                <p className="text-sm text-slate-600">
+                                  <span className="font-medium text-slate-800">Patient Condition:</span>{' '}
+                                  {enquiry.patientCondition || 'Not provided'}
+                                </p>
+                                <p className="text-xs text-slate-500">
+                                  Created{' '}
+                                  {new Date(enquiry.createdAt).toLocaleDateString('en-IN', {
+                                    day: '2-digit',
+                                    month: 'short',
+                                    year: 'numeric',
+                                  })}
+                                </p>
+                              </div>
+
+                              <form
+                                onSubmit={(event) => handleEnquiryStatusSubmit(event, enquiry._id)}
+                                className="grid w-full gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 lg:max-w-sm"
+                              >
+                                <label className="grid gap-2 text-sm font-medium text-slate-700">
+                                  Status
+                                  <select
+                                    name="status"
+                                    defaultValue={enquiry.status}
+                                    className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700"
+                                  >
+                                    <option value="PENDING">PENDING</option>
+                                    <option value="CONTACTED">CONTACTED</option>
+                                    <option value="RESOLVED">RESOLVED</option>
+                                  </select>
+                                </label>
+                                <label className="grid gap-2 text-sm font-medium text-slate-700">
+                                  Remarks
+                                  <Textarea
+                                    name="remarks"
+                                    defaultValue={enquiry.remarks || ''}
+                                    className="min-h-[100px] bg-white"
+                                    placeholder="Optional notes about follow-up"
+                                  />
+                                </label>
+                                <div className="flex flex-wrap gap-2">
+                                  <Button
+                                    type="submit"
+                                    disabled={updatingEnquiryId === enquiry._id}
+                                  >
+                                    {updatingEnquiryId === enquiry._id ? 'Updating...' : 'Update Status'}
+                                  </Button>
+                                  {user.role === 'ADMIN' ? (
+                                    <Button
+                                      type="button"
+                                      variant="destructive"
+                                      disabled={deletingEnquiryId === enquiry._id}
+                                      onClick={() => handleDeleteEnquiry(enquiry._id)}
+                                    >
+                                      {deletingEnquiryId === enquiry._id ? 'Deleting...' : 'Delete Lead'}
+                                    </Button>
+                                  ) : (
+                                    <span className="self-center text-sm text-slate-500">
+                                      Delete is restricted to ADMIN users.
+                                    </span>
+                                  )}
+                                </div>
+                              </form>
+                            </div>
+                          </div>
+                        ))}
+
+                      {!loadingEnquiries && enquiryPages > 1 && (
+                        <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+                          <p className="text-sm text-slate-600">
+                            Showing page {enquiryPage} of {enquiryPages} with {enquiryTotal} total leads.
+                          </p>
+                          <div className="flex gap-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              disabled={enquiryPage <= 1}
+                              onClick={() => setEnquiryPage((current) => Math.max(1, current - 1))}
+                            >
+                              Previous
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              disabled={enquiryPage >= enquiryPages}
+                              onClick={() =>
+                                setEnquiryPage((current) => Math.min(enquiryPages, current + 1))
+                              }
+                            >
+                              Next
+                            </Button>
+                          </div>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 </div>

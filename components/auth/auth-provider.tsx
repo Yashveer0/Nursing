@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  useCallback,
   createContext,
   ReactNode,
   useContext,
@@ -28,6 +29,7 @@ type AuthContextValue = {
   login: (email: string, password: string) => Promise<AuthResult>;
   register: (name: string, email: string, password: string) => Promise<AuthResult>;
   logout: () => void;
+  updateUser: (nextUser: AuthUser) => void;
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -44,7 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsReady(true);
   }, []);
 
-  const login = async (email: string, password: string): Promise<AuthResult> => {
+  const login = useCallback(async (email: string, password: string): Promise<AuthResult> => {
     try {
       const response = await loginUser({
         email: email.trim().toLowerCase(),
@@ -66,9 +68,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         message: error instanceof Error ? error.message : 'Login failed.',
       };
     }
-  };
+  }, []);
 
-  const register = async (
+  const register = useCallback(async (
     name: string,
     email: string,
     password: string
@@ -86,13 +88,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         message: error instanceof Error ? error.message : 'Registration failed.',
       };
     }
-  };
+  }, []);
 
-  const logout = () => {
+  const logout = useCallback(() => {
     setSession(null);
     setUser(null);
     clearAuthSession();
-  };
+  }, []);
+
+  const updateUser = useCallback((nextUser: AuthUser) => {
+    setUser(nextUser);
+    setSession((currentSession) => {
+      if (!currentSession) {
+        return currentSession;
+      }
+
+      const nextSession = {
+        ...currentSession,
+        user: nextUser,
+      };
+
+      writeAuthSession(nextSession);
+      return nextSession;
+    });
+  }, []);
 
   const value = useMemo<AuthContextValue>(
     () => ({
@@ -102,8 +121,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       login,
       register,
       logout,
+      updateUser,
     }),
-    [isReady, session, user]
+    [isReady, login, logout, register, updateUser, user]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

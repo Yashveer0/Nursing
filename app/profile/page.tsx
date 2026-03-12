@@ -1,23 +1,120 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowRight, CalendarDays, FileText, Mail, ShieldCheck, User } from 'lucide-react';
+import { ArrowRight, CalendarDays, FileText, Mail, Phone, ShieldCheck, User } from 'lucide-react';
 import Header from '@/components/header';
 import { Footer } from '@/components/footer';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/components/auth/auth-provider';
+import { getMyApplications, type UserApplication } from '@/lib/careers/api';
+import { getMyProfile, updateMyProfile } from '@/lib/userAuth/profile';
+
+const statusStyles: Record<UserApplication['status'], string> = {
+  Applied: 'bg-blue-100 text-blue-700',
+  Shortlisted: 'bg-amber-100 text-amber-700',
+  Rejected: 'bg-red-100 text-red-700',
+  Hired: 'bg-emerald-100 text-emerald-700',
+};
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { user, isAuthenticated, isReady } = useAuth();
+  const { user, isAuthenticated, isReady, updateUser } = useAuth();
+  const [applications, setApplications] = useState<UserApplication[]>([]);
+  const [loadingApplications, setLoadingApplications] = useState(true);
+  const [applicationsError, setApplicationsError] = useState('');
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [profileError, setProfileError] = useState('');
+  const [profileSuccess, setProfileSuccess] = useState('');
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
 
   useEffect(() => {
     if (isReady && !isAuthenticated) {
       router.replace('/login');
     }
   }, [isAuthenticated, isReady, router]);
+
+  useEffect(() => {
+    if (user) {
+      setName(user.name ?? '');
+      setPhone(user.phone ?? '');
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (!isReady || !isAuthenticated) {
+      return;
+    }
+
+    let active = true;
+
+    async function loadProfile() {
+      try {
+        const response = await getMyProfile();
+        if (!active || !response.data?.user) {
+          return;
+        }
+
+        updateUser(response.data.user);
+        setName(response.data.user.name ?? '');
+        setPhone(response.data.user.phone ?? '');
+        setProfileError('');
+      } catch (error) {
+        if (active) {
+          setProfileError(
+            error instanceof Error ? error.message : 'Unable to load your profile.'
+          );
+        }
+      } finally {
+        if (active) {
+          setProfileLoading(false);
+        }
+      }
+    }
+
+    void loadProfile();
+
+    return () => {
+      active = false;
+    };
+  }, [isAuthenticated, isReady, updateUser]);
+
+  useEffect(() => {
+    if (!isReady || !isAuthenticated) {
+      return;
+    }
+
+    let active = true;
+
+    async function loadApplications() {
+      try {
+        const data = await getMyApplications();
+        if (active) {
+          setApplications(data);
+          setApplicationsError('');
+        }
+      } catch (error) {
+        if (active) {
+          setApplicationsError(
+            error instanceof Error ? error.message : 'Unable to load your application statuses.'
+          );
+        }
+      } finally {
+        if (active) {
+          setLoadingApplications(false);
+        }
+      }
+    }
+
+    void loadApplications();
+
+    return () => {
+      active = false;
+    };
+  }, [isAuthenticated, isReady]);
 
   if (!isReady || !isAuthenticated || !user) {
     return (
@@ -29,6 +126,50 @@ export default function ProfilePage() {
         <Footer />
       </main>
     );
+  }
+
+  const latestApplications = applications.slice(0, 3);
+  const normalizedName = name.trim();
+  const normalizedPhone = phone.trim();
+
+  async function handleProfileUpdate(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setProfileError('');
+    setProfileSuccess('');
+
+    if (normalizedName.length < 2) {
+      setProfileError('Name must be at least 2 characters.');
+      return;
+    }
+
+    if (normalizedPhone && !/^\d{10}$/.test(normalizedPhone)) {
+      setProfileError('Phone number must be exactly 10 digits.');
+      return;
+    }
+
+    setIsSavingProfile(true);
+
+    try {
+      const response = await updateMyProfile({
+        name: normalizedName,
+        phone: normalizedPhone || undefined,
+      });
+
+      if (!response.data?.user) {
+        throw new Error('Profile update failed.');
+      }
+
+      updateUser(response.data.user);
+      setName(response.data.user.name ?? '');
+      setPhone(response.data.user.phone ?? '');
+      setProfileSuccess(response.message || 'Profile updated successfully.');
+    } catch (error) {
+      setProfileError(
+        error instanceof Error ? error.message : 'Unable to update your profile.'
+      );
+    } finally {
+      setIsSavingProfile(false);
+    }
   }
 
   return (
@@ -83,21 +224,85 @@ export default function ProfilePage() {
                 </div>
 
                 <div className="space-y-5">
-                  <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6 transition-colors hover:border-sky-200 hover:bg-sky-50/60">
-                    <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-100 text-blue-700">
-                      <User className="h-6 w-6" />
+                  <form
+                    onSubmit={handleProfileUpdate}
+                    className="rounded-3xl border border-slate-200 bg-slate-50 p-6"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="text-sm font-medium text-slate-500">Update Profile</p>
+                        <h3 className="mt-2 text-xl font-semibold text-slate-900">
+                          Edit your account details
+                        </h3>
+                      </div>
+                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-100 text-blue-700">
+                        <User className="h-6 w-6" />
+                      </div>
                     </div>
-                    <p className="text-sm font-medium text-slate-500">Full Name</p>
-                    <p className="mt-2 text-xl font-semibold text-slate-900">{user.name}</p>
-                  </div>
 
-                  <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6 transition-colors hover:border-sky-200 hover:bg-sky-50/60">
-                    <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-100 text-blue-700">
-                      <Mail className="h-6 w-6" />
+                    <div className="mt-6 grid gap-4">
+                      <label className="grid gap-2">
+                        <span className="text-sm font-medium text-slate-600">Full Name</span>
+                        <input
+                          type="text"
+                          value={name}
+                          onChange={(event) => setName(event.target.value)}
+                          className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-sky-400"
+                          placeholder="Enter your full name"
+                          disabled={profileLoading || isSavingProfile}
+                        />
+                      </label>
+
+                      <label className="grid gap-2">
+                        <span className="text-sm font-medium text-slate-600">Phone Number</span>
+                        <input
+                          type="tel"
+                          inputMode="numeric"
+                          maxLength={10}
+                          value={phone}
+                          onChange={(event) =>
+                            setPhone(event.target.value.replace(/\D/g, '').slice(0, 10))
+                          }
+                          className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-sky-400"
+                          placeholder="10 digit phone number"
+                          disabled={profileLoading || isSavingProfile}
+                        />
+                      </label>
                     </div>
-                    <p className="text-sm font-medium text-slate-500">Email Address</p>
-                    <p className="mt-2 break-all text-xl font-semibold text-slate-900">{user.email}</p>
-                  </div>
+
+                    <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
+                      <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-100 text-blue-700">
+                        <Mail className="h-5 w-5" />
+                      </div>
+                      <p className="text-sm font-medium text-slate-500">Email Address</p>
+                      <p className="mt-2 break-all text-base font-semibold text-slate-900">
+                        {user.email}
+                      </p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        Email is read-only because your backend update route only supports name and
+                        phone.
+                      </p>
+                    </div>
+
+                    <div className="mt-4 flex flex-wrap items-center gap-3">
+                      <Button
+                        type="submit"
+                        className="rounded-full bg-sky-700 text-white hover:bg-sky-800"
+                        disabled={profileLoading || isSavingProfile}
+                      >
+                        {isSavingProfile ? 'Saving...' : 'Save Profile'}
+                      </Button>
+                      {profileLoading && (
+                        <p className="text-sm text-slate-500">Loading latest profile details...</p>
+                      )}
+                      {!profileLoading && profileError && (
+                        <p className="text-sm text-red-600">{profileError}</p>
+                      )}
+                      {!profileLoading && !profileError && profileSuccess && (
+                        <p className="text-sm text-emerald-600">{profileSuccess}</p>
+                      )}
+                    </div>
+                  </form>
 
                   <div className="grid gap-5 sm:grid-cols-2">
                     <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6">
@@ -110,17 +315,27 @@ export default function ProfilePage() {
 
                     <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6">
                       <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-100 text-amber-700">
-                        <CalendarDays className="h-6 w-6" />
+                        <Phone className="h-6 w-6" />
                       </div>
-                      <p className="text-sm font-medium text-slate-500">Joined On</p>
+                      <p className="text-sm font-medium text-slate-500">Phone Number</p>
                       <p className="mt-2 text-lg font-semibold text-slate-900">
-                        {new Date(user.createdAt).toLocaleDateString('en-IN', {
-                          day: '2-digit',
-                          month: 'short',
-                          year: 'numeric',
-                        })}
+                        {user.phone || 'Not added'}
                       </p>
                     </div>
+                  </div>
+
+                  <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6">
+                    <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-100 text-amber-700">
+                      <CalendarDays className="h-6 w-6" />
+                    </div>
+                    <p className="text-sm font-medium text-slate-500">Joined On</p>
+                    <p className="mt-2 text-lg font-semibold text-slate-900">
+                      {new Date(user.createdAt).toLocaleDateString('en-IN', {
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric',
+                      })}
+                    </p>
                   </div>
 
                   <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6 transition-colors hover:border-sky-200 hover:bg-sky-50/60">
@@ -131,6 +346,41 @@ export default function ProfilePage() {
                     <p className="mt-2 text-base leading-7 text-slate-700">
                       Track all jobs you have applied for and review each application status.
                     </p>
+                    <div className="mt-5 space-y-3">
+                      {loadingApplications && (
+                        <p className="text-sm text-slate-500">Loading application statuses...</p>
+                      )}
+                      {!loadingApplications && applicationsError && (
+                        <p className="text-sm text-red-600">{applicationsError}</p>
+                      )}
+                      {!loadingApplications && !applicationsError && applications.length === 0 && (
+                        <p className="text-sm text-slate-500">No job applications found yet.</p>
+                      )}
+                      {!loadingApplications &&
+                        !applicationsError &&
+                        latestApplications.map((application) => (
+                          <div
+                            key={application._id}
+                            className="rounded-2xl border border-slate-200 bg-white px-4 py-3"
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div>
+                                <p className="font-medium text-slate-900">
+                                  {application.job?.title ?? 'Job'}
+                                </p>
+                                <p className="mt-1 text-sm text-slate-500">
+                                  {application.job?.location ?? 'Location not available'}
+                                </p>
+                              </div>
+                              <span
+                                className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${statusStyles[application.status]}`}
+                              >
+                                {application.status}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
                     <Link href="/my-applications" className="mt-4 inline-block">
                       <Button variant="outline" className="border-sky-200 text-sky-700 hover:bg-sky-50">
                         View Applications
